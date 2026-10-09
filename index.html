@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>WHITELINE — Open World Drive</title>
+<style>
+:root{
+  color-scheme:dark;
+  --accent:#b8f56a;
+  --panel:rgba(12,18,24,.83);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111923}
+body{font-family:Arial,Helvetica,sans-serif;color:#fff;user-select:none}
+button,select{font:inherit}
+button{cursor:pointer;border:0;color:inherit}
+canvas#game{display:block;width:100%;height:100%;touch-action:none}
+#hud{position:fixed;inset:0;pointer-events:none;display:none}
+.logo{position:absolute;left:24px;top:22px;font-weight:900;letter-spacing:5px;font-size:19px}
+.logo span{color:var(--accent)}
+.location{margin-top:9px;font-size:11px;letter-spacing:2px;color:#c6d1db}
+.panel{background:var(--panel);border:1px solid #ffffff17;backdrop-filter:blur(14px)}
+#mapBox{position:absolute;right:22px;top:22px;padding:8px;border-radius:22px}
+#map{display:block;width:180px;height:180px;border-radius:15px}
+.mapLabel{font-size:9px;text-align:center;color:#b7c4cf;letter-spacing:3px;margin:8px 0 2px}
+#speedBox{position:absolute;bottom:30px;right:26px;border-radius:25px;padding:20px 24px;min-width:210px}
+.speedRow{display:flex;align-items:baseline;gap:10px}
+#speed{font-size:64px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.unit{color:#aebecb;font-size:12px}
+#gear{color:var(--accent);font-size:21px;margin-left:auto}
+#meter{height:5px;background:#ffffff1c;border-radius:10px;margin:14px 0;overflow:hidden}
+#meterFill{height:100%;width:0;background:var(--accent);transition:width .12s}
+.stats{font-size:11px;line-height:1.9;color:#afbecb}
+.stats strong{color:#f5f8fa;font-weight:500}
+#help{position:absolute;left:24px;bottom:28px;color:#c5d0da;font-size:12px;line-height:1.9;text-shadow:0 2px 5px #000}
+#buttons{position:absolute;left:24px;top:95px;display:flex;gap:8px;pointer-events:auto}
+.smallBtn{padding:11px 14px;border-radius:13px;background:rgba(12,18,24,.77);border:1px solid #ffffff22;font-size:12px}
+.smallBtn:hover{background:#30404e}
+#toast{position:absolute;left:50%;top:26px;transform:translateX(-50%);background:#14212ae6;border:1px solid #ffffff22;border-radius:14px;padding:12px 19px;font-size:12px;opacity:0;transition:opacity .25s;text-align:center;max-width:70vw}
+#overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(110deg,#081018ee,#142332b5);padding:20px;overflow:auto}
+.menu{width:min(650px,100%);padding:36px;border-radius:30px;background:#111c26ef;border:1px solid #ffffff20;box-shadow:0 25px 100px #0007}
+.tag{color:var(--accent);font-size:11px;letter-spacing:4px;margin-bottom:16px}
+h1{margin:0;font-size:clamp(32px,7vw,60px);letter-spacing:-3px;font-weight:900}
+h1 span{color:var(--accent)}
+.subtitle{font-size:14px;line-height:1.7;color:#aabac9;margin:16px 0 24px}
+.label{font-size:11px;letter-spacing:2px;color:#aabac9;margin:19px 0 10px}
+.choice{display:flex;gap:10px}
+.choice button{flex:1;padding:15px 8px;border-radius:14px;background:#20303e;border:1px solid #ffffff0f;font-weight:bold}
+.choice button.selected{background:var(--accent);color:#152011;border-color:var(--accent)}
+select{width:100%;padding:14px;border-radius:14px;background:#20303e;color:white;border:1px solid #ffffff18;outline:none}
+#start{width:100%;margin-top:25px;padding:18px;background:var(--accent);color:#14200c;font-weight:800;border-radius:16px;font-size:16px}
+.menuFoot{color:#8194a5;font-size:11px;line-height:1.7;margin-top:18px}
+#savedInfo{color:#cad7df;font-size:12px;margin-top:16px}
+#error{display:none;position:fixed;inset:0;z-index:20;background:#111b25;color:#fff;padding:40px;font-size:18px;align-items:center;justify-content:center;text-align:center}
+#touch{display:none;position:absolute;inset:0;pointer-events:none}
+.touchGroup{position:absolute;bottom:max(22px,env(safe-area-inset-bottom));display:flex;gap:11px;align-items:end}
+.touchLeft{left:18px}
+.touchRight{right:18px}
+.touchBtn{pointer-events:auto;touch-action:none;width:65px;height:65px;background:#101b25b8;border:1px solid #ffffff35;border-radius:19px;color:#fff;font-size:24px;box-shadow:0 5px 20px #0002}
+.touchBtn.pressed{background:#b8f56ac9;color:#152011}
+.touchBtn.pedal{height:94px;font-size:13px;font-weight:bold}
+.touchBtn.boost{position:absolute;bottom:131px;right:18px;font-size:12px;width:65px;height:49px}
+.touchBtn.hand{position:absolute;bottom:100px;left:18px;font-size:11px;width:141px;height:43px}
+body.mobile #speedBox{bottom:135px;right:18px;min-width:145px;padding:13px 16px}
+body.mobile #speed{font-size:42px}
+body.mobile #help{display:none}
+body.mobile #mapBox{right:14px;top:16px}
+body.mobile #map{width:125px;height:125px}
+body.mobile .logo{left:17px;top:21px;font-size:15px}
+body.mobile #buttons{left:17px;top:83px;gap:5px}
+body.mobile .smallBtn{padding:10px;font-size:10px}
+body.mobile #toast{top:170px}
+@media(max-height:600px){
+  .menu{padding:22px}
+  .subtitle{margin:10px 0}
+  .label{margin-top:12px}
+  #start{margin-top:16px}
+  .menuFoot{margin-top:10px}
+  body.mobile #map{width:94px;height:94px}
+  body.mobile #speedBox{bottom:130px;padding:10px 14px}
+  body.mobile .stats{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div class="logo">WHITE<span>LINE</span><div class="location" id="district">ЦЕНТР ГОРОДА</div></div>
+  <div id="buttons">
+    <button class="smallBtn" id="menuBtn">Меню</button>
+    <button class="smallBtn" id="cameraBtn">Камера</button>
+    <button class="smallBtn" id="resetBtn">На дорогу</button>
+    <button class="smallBtn" id="fullBtn">⛶</button>
+  </div>
+  <div id="mapBox" class="panel">
+    <canvas id="map" width="240" height="240"></canvas>
+    <div class="mapLabel">NAVIGATION</div>
+  </div>
+  <div id="speedBox" class="panel">
+    <div class="speedRow"><span id="speed">0</span><span class="unit">км/ч</span><span id="gear">N</span></div>
+    <div id="meter"><div id="meterFill"></div></div>
+    <div class="stats">
+      Заезд: <strong id="trip">0.00 км</strong><br>
+      Общий пробег: <strong id="total">0.00 км</strong><br>
+      Рекорд скорости: <strong id="record">0 км/ч</strong>
+    </div>
+  </div>
+  <div id="help">
+    W / ↑ — газ · S / ↓ — тормоз и задний ход<br>
+    A / D — поворот · Пробел — ручник · Shift — ускорение<br>
+    C — камера · R — на дорогу · Esc — меню
+  </div>
+  <div id="toast"></div>
+  <div id="touch">
+    <div class="touchGroup touchLeft">
+      <button class="touchBtn" data-action="left">◀</button>
+      <button class="touchBtn" data-action="right">▶</button>
+    </div>
+    <button class="touchBtn hand" data-action="hand">РУЧНИК</button>
+    <div class="touchGroup touchRight">
+      <button class="touchBtn pedal" data-action="brake">ТОРМОЗ</button>
+      <button class="touchBtn pedal" data-action="gas">ГАЗ</button>
+    </div>
+    <button class="touchBtn boost" data-action="boost">BOOST</button>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="menu">
+    <div class="tag">PROCEDURAL OPEN WORLD</div>
+    <h1>WHITE<span>LINE</span></h1>
+    <p class="subtitle">Белый спорткар, городские кварталы, мосты и вечерняя набережная. Свободная поездка без гонок и таймеров.</p>
+    <div class="label">УПРАВЛЕНИЕ</div>
+    <div class="choice">
+      <button id="pcChoice" class="selected">Клавиатура / ПК</button>
+      <button id="phoneChoice">Телефон</button>
+    </div>
+    <div class="label">ВРЕМЯ СУТОК</div>
+    <select id="daySelect">
+      <option value="day">День</option>
+      <option value="sunset">Закат</option>
+      <option value="night">Ночь</option>
+    </select>
+    <button id="start">Начать поездку</button>
+    <div id="savedInfo"></div>
+    <div class="menuFoot">Чистый WebGL • без библиотек • сохранение статистики на устройстве.<br>На телефоне удобнее играть горизонтально.</div>
+  </div>
+</div>
+<div id="error"></div>
+
+<script>
+'use strict';
+
+/* ---------- Интерфейс и сохранение ---------- */
+
+const $=id=>document.getElementById(id);
+const canvas=$('game');
+const gl=canvas.getContext('webgl',{
+  antialias:true,alpha:false,powerPreference:'high-performance'
+});
+if(!gl){
+  $('error').style.display='flex';
+  $('error').textContent='WebGL недоступен. Открой файл в современном браузере с включённым аппаратным ускорением.';
+  throw new Error('WebGL unavailable');
+}
+const SAVE_KEY='whiteline-drive-v1';
+let saved={distance:0,record:0};
+try{
+  const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
+  saved.distance=Number.isFinite(s.distance)&&s.distance>=0?s.distance:0;
+  saved.record=Number.isFinite(s.record)&&s.record>=0?s.record:0;
+}catch(e){}
+function save(){
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(saved));}catch(e){}
+}
+$('savedInfo').textContent=`Общий пробег: ${(saved.distance/1000).toFixed(2)} км · Рекорд: ${Math.round(saved.record)} км/ч`;
+
+let mobile=false,playing=false,started=false,day='day',cameraMode=0;
+const input={gas:false,brake:false,left:false,right:false,hand:false,boost:false};
+function clearInput(){
+  Object.keys(input).forEach(k=>input[k]=false);
+  document.querySelectorAll('.touchBtn').forEach(b=>b.classList.remove('pressed'));
+}
+function chooseMobile(value){
+  mobile=value;
+  $('pcChoice').classList.toggle('selected',!value);
+  $('phoneChoice').classList.toggle('selected',value);
+}
+$('pcChoice').onclick=()=>chooseMobile(false);
+$('phoneChoice').onclick=()=>chooseMobile(true);
+let toastUntil=0;
+function toast(text){
+  $('toast').textContent=text;
+  $('toast').style.opacity=1;
+  toastUntil=performance.now()+2400;
+}
+
+/* ---------- Математика ---------- */
+
+const PI=Math.PI,TAU=PI*2;
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const mix=(a,b,t)=>a+(b-a)*t;
+function normalize(a){
+  const n=Math.hypot(...a)||1;
+  return a.map(x=>x/n);
+}
+function cross(a,b){
+  return [
+    a[1]*b[2]-a[2]*b[1],
+    a[2]*b[0]-a[0]*b[2],
+    a[0]*b[1]-a[1]*b[0]
+  ];
+}
+function sub(a,b){return a.map((x,i)=>x-b[i]);}
+function multiply(a,b){
+  const out=new Float32Array(16);
+  for(let c=0;c<4;c++){
+    for(let r=0;r<4;r++){
+      out[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];
+    }
+  }
+  return out;
+}
+function identity(){
+  return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+}
+function model(x,y,z,ry=0,rx=0){
+  const c=Math.cos(ry),s=Math.sin(ry),a=Math.cos(rx),b=Math.sin(rx);
+  return new Float32Array([
+    c,0,-s,0,
+    s*b,a,c*b,0,
+    s*a,-b,c*a,0,
+    x,y,z,1
+  ]);
+}
+function perspective(fov,aspect,near,far){
+  const f=1/Math.tan(fov/2),nf=1/(near-far);
+  return new Float32Array([
+    f/aspect,0,0,0,0,f,0,0,
+    0,0,(far+near)*nf,-1,
+    0,0,2*far*near*nf,0
+  ]);
+}
+function lookAt(eye,target){
+  const z=normalize(sub(eye,target));
+  const x=normalize(cross([0,1,0],z));
+  const y=cross(z,x);
+  return new Float32Array([
+    x[0],y[0],z[0],0,
+    x[1],y[1],z[1],0,
+    x[2],y[2],z[2],0,
+    -(x[0]*eye[0]+x[1]*eye[1]+x[2]*eye[2]),
+    -(y[0]*eye[0]+y[1]*eye[1]+y[2]*eye[2]),
+    -(z[0]*eye[0]+z[1]*eye[1]+z[2]*eye[2]),1
+  ]);
+}
+function rng(seed){
+  let a=seed>>>0;
+  return function(){
+    a+=0x6D2B79F5;
+    let t=a;
+    t=Math.imul(t^(t>>>15),t|1);
+    t^=t+Math.imul(t^(t>>>7),t|61);
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+
+/* ---------- WebGL ---------- */
+
+function shader(type,source){
+  const s=gl.createShader(type);
+  gl.shaderSource(s,source);
+  gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+const vertexSource=`
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+attribute vec3 aColor;
+uniform mat4 uViewProjection;
+uniform mat4 uModel;
+varying vec3 vPosition;
+varying vec3 vNormal;
+varying vec3 vColor;
+void main(){
+  vec4 world=uModel*vec4(aPosition,1.0);
+  vPosition=world.xyz;
+  vNormal=mat3(uModel)*aNormal;
+  vColor=aColor;
+  gl_Position=uViewProjection*world;
+}`;
+const fragmentSource=`
+precision mediump float;
+varying vec3 vPosition;
+varying vec3 vNormal;
+varying vec3 vColor;
+uniform vec3 uEye;
+uniform vec3 uFog;
+uniform vec3 uSun;
+uniform vec3 uTint;
+uniform float uAmbient;
+uniform float uTime;
+uniform float uWater;
+void main(){
+  vec3 normal=normalize(vNormal);
+  float diffuse=max(dot(normal,uSun),0.0);
+  float light=uAmbient+diffuse*(1.0-uAmbient)*0.92;
+  vec3 base=vColor*uTint;
+  vec3 color=base*light;
+  float emission=max(max(base.r,base.g),base.b);
+  if(emission>1.0)color=base;
+  if(uWater>0.5){
+    float wave=sin(vPosition.x*0.17+uTime*0.9)
+       *sin(vPosition.z*0.11-uTime*0.65);
+    float ripple=sin(vPosition.x*0.8+vPosition.z*0.45-uTime*1.6);
+    color=base*(0.76+wave*0.12+ripple*0.05);
+    vec3 viewDir=normalize(uEye-vPosition);
+    float fresnel=pow(1.0-max(viewDir.y,0.0),3.0);
+    color=mix(color,uFog*0.9,fresnel*0.52);
+  }
+  float distanceToEye=length(vPosition-uEye);
+  float fog=smoothstep(230.0,650.0,distanceToEye);
+  color=mix(color,uFog,fog);
+  gl_FragColor=vec4(color,1.0);
+}`;
+const program=gl.createProgram();
+gl.attachShader(program,shader(gl.VERTEX_SHADER,vertexSource));
+gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fragmentSource));
+gl.linkProgram(program);
+if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));
+gl.useProgram(program);
+const locations={};
+['aPosition','aNormal','aColor'].forEach(n=>locations[n]=gl.getAttribLocation(program,n));
+['uViewProjection','uModel','uEye','uFog','uSun','uTint','uAmbient','uTime','uWater'].forEach(n=>locations[n]=gl.getUniformLocation(program,n));
+gl.enable(gl.DEPTH_TEST);
+gl.disable(gl.CULL_FACE);
+
+/* Статические объекты каждого сектора объединяются в один VBO. */
+class Builder{
+  constructor(){this.data=[];}
+  tri(a,b,c,color){
+    const normal=normalize(cross(sub(b,a),sub(c,a)));
+    for(const p of [a,b,c])this.data.push(...p,...normal,...color);
+  }
+  quad(a,b,c,d,color){
+    this.tri(a,b,c,color);
+    this.tri(a,c,d,color);
+  }
+  box(x,y,z,w,h,d,color){
+    const l=x-w/2,r=x+w/2,b=y,t=y+h,f=z-d/2,k=z+d/2;
+    this.quad([l,b,f],[r,b,f],[r,t,f],[l,t,f],color);
+    this.quad([r,b,k],[l,b,k],[l,t,k],[r,t,k],color);
+    this.quad([l,b,k],[l,b,f],[l,t,f],[l,t,k],color);
+    this.quad([r,b,f],[r,b,k],[r,t,k],[r,t,f],color);
+    this.quad([l,t,f],[r,t,f],[r,t,k],[l,t,k],color);
+    this.quad([l,b,k],[r,b,k],[r,b,f],[l,b,f],color);
+  }
+  sphere(x,y,z,rx,ry,rz,color,segments=7,rings=4){
+    function point(i,j){
+      const a=i/segments*TAU,b=j/rings*PI;
+      return [x+Math.cos(a)*Math.sin(b)*rx,y+Math.cos(b)*ry,z+Math.sin(a)*Math.sin(b)*rz];
+    }
+    for(let j=0;j<rings;j++){
+      for(let i=0;i<segments;i++){
+        this.quad(point(i,j),point(i+1,j),point(i+1,j+1),point(i,j+1),color);
+      }
+    }
+  }
+  cylinder(x,y,z,r,h,color,segments=9){
+    for(let i=0;i<segments;i++){
+      const a=i*TAU/segments,b=(i+1)*TAU/segments;
+      const p=[x+Math.cos(a)*r,y,z+Math.sin(a)*r];
+      const q=[x+Math.cos(b)*r,y,z+Math.sin(b)*r];
+      const pt=[p[0],y+h,p[2]],qt=[q[0],y+h,q[2]];
+      this.quad(p,q,qt,pt,color);
+      this.tri([x,y+h,z],pt,qt,color);
+    }
+  }
+  mesh(){
+    const buffer=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(this.data),gl.STATIC_DRAW);
+    return {buffer,count:this.data.length/9};
+  }
+}
+const I=identity();
+function draw(mesh,mat=I,tint=[1,1,1],water=false){
+  gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);
+  for(const [name,offset] of [['aPosition',0],['aNormal',12],['aColor',24]]){
+    const index=locations[name];
+    gl.enableVertexAttribArray(index);
+    gl.vertexAttribPointer(index,3,gl.FLOAT,false,36,offset);
+  }
+  gl.uniformMatrix4fv(locations.uModel,false,mat);
+  gl.uniform3fv(locations.uTint,tint);
+  gl.uniform1f(locations.uWater,water?1:0);
+  gl.drawArrays(gl.TRIANGLES,0,mesh.count);
+}
+
+/* ---------- Модель спорткара ---------- */
+
+const white=[.88,.91,.94],black=[.035,.043,.05],glass=[.075,.11,.14];
+const metal=[.26,.30,.34],yellow=[.98,.66,.04];
+
+function makeCar(){
+  const b=new Builder();
+
+  /* Продольные сечения широкого кузова. Перед направлен в -Z. */
+  const sections=[
+    [-2.48,.78,.30,.63],
+    [-2.25,.99,.29,.78],
+    [-1.55,1.01,.29,.91],
+    [-.72,.94,.31,.96],
+    [.48,.96,.30,.94],
+    [1.45,1.04,.29,.90],
+    [2.15,.98,.29,.78],
+    [2.38,.82,.34,.73]
+  ];
+  const ring=s=>{
+    const [z,w,low,high]=s;
+    return [
+      [-w*.80,low,z],[-w,low+.12,z],[-w,high-.17,z],
+      [-w*.81,high,z],[0,high+.025,z],[w*.81,high,z],
+      [w,high-.17,z],[w,low+.12,z],[w*.80,low,z],[0,low,z]
+    ];
+  };
+  for(let j=0;j<sections.length-1;j++){
+    const a=ring(sections[j]),c=ring(sections[j+1]);
+    for(let i=0;i<a.length;i++){
+      const n=(i+1)%a.length;
+      b.quad(a[i],a[n],c[n],c[i],white);
+    }
+  }
+  const front=ring(sections[0]),rear=ring(sections.at(-1));
+  for(let i=0;i<front.length;i++){
+    b.tri([0,.47,-2.48],front[i],front[(i+1)%front.length],white);
+    b.tri([0,.49,2.38],rear[(i+1)%rear.length],rear[i],white);
+  }
+
+  /* Крыша, переднее и заднее стекло. */
+  b.quad([-.76,.96,-.87],[.76,.96,-.87],[.63,1.47,-.17],[-.63,1.47,-.17],glass);
+  b.quad([-.63,1.47,-.17],[.63,1.47,-.17],[.62,1.48,.57],[-.62,1.48,.57],white);
+  b.quad([-.62,1.48,.57],[.62,1.48,.57],[.83,.95,1.57],[-.83,.95,1.57],glass);
+
+  for(const side of [-1,1]){
+    const s=side;
+    b.quad([s*.92,.94,-.77],[s*.65,1.47,-.13],[s*.65,1.48,.56],[s*.94,.93,1.38],white);
+    b.quad([s*.928,1.00,-.59],[s*.665,1.405,-.10],[s*.673,1.409,.34],[s*.936,1.00,.64],glass);
+    b.quad([s*.681,1.405,.44],[s*.682,1.408,.54],[s*.928,1.00,1.21],[s*.936,1.00,.73],glass);
+
+    b.box(s*1.00,.87,-.45,.30,.13,.23,white);
+    b.box(s*.963,.76,.58,.016,.038,.18,metal);
+
+    /* Нижние пороги и боковой воздухозаборник. */
+    b.box(s*.97,.245,.10,.16,.12,2.05,white);
+    b.box(s*1.02,.235,.10,.065,.047,2.17,black);
+    b.quad([s*1.025,.41,.89],[s*1.025,.62,1.02],[s*1.025,.65,1.23],[s*1.025,.39,1.11],black);
+
+    /* Обводы колёсных арок. */
+    for(const z of [-1.48,1.48]){
+      const x=s*1.035;
+      for(let i=0;i<14;i++){
+        const a=i/14*PI,c=(i+1)/14*PI;
+        const r=.525,rr=.565;
+        b.quad(
+          [x,.47+Math.sin(a)*r,z+Math.cos(a)*r],
+          [x,.47+Math.sin(c)*r,z+Math.cos(c)*r],
+          [x,.47+Math.sin(c)*rr,z+Math.cos(c)*rr],
+          [x,.47+Math.sin(a)*rr,z+Math.cos(a)*rr],
+          [.14,.16,.18]
+        );
+      }
+    }
+  }
+
+  /* Передние фары и тёмные корпуса. */
+  for(const s of [-1,1]){
+    b.quad([s*.40,.68,-2.465],[s*.83,.68,-2.34],[s*.83,.82,-2.08],[s*.40,.87,-2.17],black);
+    b.quad([s*.44,.715,-2.472],[s*.77,.711,-2.375],[s*.77,.79,-2.15],[s*.44,.828,-2.21],[.57,.69,.79]);
+    for(const x of [.51,.69]){
+      b.sphere(s*x,.758,-2. thirty||0,1,1,1,white);
+    }
+  }
+  return b;
+}
+</script>
+<script>
+/*
+  Продолжение конструктора модели.
+  Фары ниже создаются отдельными линзами — без внешних текстур.
+*/
+</script>
+</body>
+</html>
