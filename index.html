@@ -1,400 +1,1042 @@
-/* ================= ПЕТЕРБУРГСКИЕ ОРИЕНТИРЫ ================= */
-
-    // Загрузчик районов использует heading, а физика — h.
-    // Объединяем названия, чтобы районы впереди машины
-    // действительно получали приоритет загрузки.
-    Object.defineProperty(car,'heading',{
-      configurable:true,
-      get(){return this.h;},
-      set(value){this.h=value;}
-    });
-
-    document.title='WHITELINE — Санкт-Петербург';
-
-    document.querySelector('.mapText').textContent='САНКТ-ПЕТЕРБУРГ';
-
-    document.querySelector('.tag').textContent=
-      'SAINT PETERSBURG / OPEN WORLD / WEBGL';
-
-    document.querySelector('.subtitle').textContent=
-      'Поездка по стилизованному Петербургу: Нева, мосты, '+
-      'Дворцовая площадь, Ростральные колонны, пастельные фасады '+
-      'и гранитные набережные. Планировка художественная, '+
-      'не является точной географической картой.';
-
-    const foot=document.querySelector('#drivePage .foot');
-    foot.innerHTML=
-      'Мир 2,88 × 2,88 км с петербургскими ориентирами.<br>'+
-      'Районы загружаются постепенно. Прогресс сохраняется локально.<br>'+
-      'Разрешение автоматически адаптируется к производительности.';
-
-    zoneNames.center='АДМИРАЛТЕЙСКИЙ РАЙОН';
-    zoneNames.water='НЕВСКИЕ НАБЕРЕЖНЫЕ';
-    zoneNames.residential='ПЕТРОГРАДСКАЯ СТОРОНА';
-    zoneNames.industrial='ВАСИЛЕОСТРОВСКИЙ РАЙОН';
-    zoneNames.suburb='ПРИМОРСКИЙ РАЙОН';
-
-    const spbPoints=[
-      {x:60,z:60,name:'Дворцовая площадь',short:'Дворцовая'},
-      {x:282,z:-60,name:'Зимний дворец',short:'Эрмитаж'},
-      {x:441,z:40,name:'Ростральные колонны',short:'Стрелка'},
-      {x:454,z:-186,name:'Петропавловская крепость',short:'Крепость'},
-      {x:360,z:0,name:'Дворцовый мост',short:'Дворцовый мост'},
-      {x:lx,z:lz,name:'Исаакиевский собор',short:'Исаакий'}
-    ];
-
-    const spbMeshes=[];
-
-    function addSpbMesh(builder,x,z,radius){
-      spbMeshes.push({
-        mesh:builder.mesh(),
-        x,z,radius
-      });
-    }
-
-    /* Александровская колонна на центральной площади.
-       В этой версии площадь находится в парковом секторе. */
-
-    {
-      const b=new Builder();
-      const x=60,z=60,y=groundHeight(x,z);
-
-      b.cylinder(x,y+.72,z,3.4,.38,[.55,.52,.47],20);
-      b.box(x,y+1.10,z,3.4,1.55,3.4,[.48,.36,.29]);
-
-      b.cylinder(x,y+2.65,z,.88,13.2,[.64,.40,.31],18);
-      b.cylinder(x,y+15.85,z,1.25,.38,[.69,.59,.41],14);
-      b.box(x,y+16.23,z,1.1,.60,1.1,[.31,.34,.29]);
-
-      // Условная фигура ангела.
-      b.cylinder(x,y+16.83,z,.20,1.16,[.35,.38,.30],7);
-      b.sphere(x,y+18.15,z,.20,.23,.20,[.38,.40,.32],7,4);
-
-      b.beam(
-        [x,y+17.60,z],
-        [x-.88,y+18.08,z+.18],
-        .14,[.35,.38,.30]
-      );
-      b.beam(
-        [x,y+17.60,z],
-        [x+.88,y+18.08,z+.18],
-        .14,[.35,.38,.30]
-      );
-
-      b.box(x+.42,y+16.80,z-.17,.07,1.92,.07,[.43,.45,.34]);
-      b.box(x+.42,y+18.02,z-.17,.66,.07,.07,[.43,.45,.34]);
-
-      landmarkColliders.push({x,z,w:1.9,d:1.9});
-      addSpbMesh(b,x,z,28);
-    }
-
-    /* Набережная с небольшим стилизованным Зимним дворцом.
-       Узкий береговой участок свободен от обычной застройки. */
-
-    {
-      const b=new Builder();
-      const x=282,z=-60;
-      const y=groundHeight(x,z);
-      const mint=[.55,.74,.66];
-      const cream=[.91,.86,.72];
-
-      building(
-        b,landmarkColliders,
-        x,z,35,75,17.5,mint,true
-      );
-
-      // Белые пилястры на речном фасаде.
-      for(let i=0;i<12;i++){
-        const zz=z-33+i*6;
-        b.box(x+17.68,y+.8,zz,.35,15.8,.65,cream);
-        b.box(x+17.85,y+15.95,zz,.65,.50,1.00,cream);
-      }
-
-      b.box(x,y+18.5,z,36.5,.48,76.5,cream);
-
-      // Балюстрада и декоративные фигуры на крыше.
-      for(let i=0;i<10;i++){
-        const zz=z-31+i*7;
-        b.box(x+16.7,y+18.98,zz,.48,1.12,.48,cream);
-        b.sphere(
-          x+16.7,y+20.27,zz,
-          .25,.38,.25,cream,6,3
-        );
-      }
-
-      // Центральный вход.
-      b.box(x-17.62,y,z, .16,4.2,4.2,[.12,.22,.20]);
-      b.box(x-18.1,y+4.2,z,1.3,.32,5.4,cream);
-
-      for(const zz of [z-29,z+29]){
-        lamp(b,304,zz,true);
-      }
-
-      addSpbMesh(b,x,z,78);
-    }
-
-    /* Ростральные колонны на противоположном берегу. */
-
-    {
-      const b=new Builder();
-      const stone=[.77,.38,.25];
-      const dark=[.26,.30,.28];
-
-      for(const z of [25,75]){
-        const x=441,y=groundHeight(x,z);
-
-        b.box(x,y,z,4.2,.65,4.2,[.58,.55,.48]);
-        b.box(x,y+.65,z,2.8,1.1,2.8,[.55,.49,.39]);
-        b.cylinder(x,y+1.75,z,.95,13.1,stone,16);
-        b.cylinder(x,y+14.85,z,1.43,.45,dark,14);
-        b.cylinder(x,y+15.3,z,.63,.55,dark,10);
-
-        // Декоративные носы кораблей.
-        for(let level=0;level<3;level++){
-          const yy=y+4+level*3.1;
-          for(const s of [-1,1]){
-            b.beam(
-              [x+s*.7,yy,z],
-              [x+s*2.6,yy+.27,z],
-              .40,dark
-            );
-            b.box(x+s*2.4,yy+.18,z,.65,.32,.65,dark);
-          }
-        }
-
-        landmarkColliders.push({x,z,w:2.2,d:2.2});
-      }
-
-      addSpbMesh(b,441,50,55);
-    }
-
-    /* Петропавловский шпиль и фрагмент крепостной стены.
-       Это художественный ориентир, а не масштабная реконструкция. */
-
-    {
-      const b=new Builder();
-      const x=454,z=-186,y=groundHeight(x,z);
-      const yellow=[.84,.73,.43];
-      const white=[.88,.85,.71];
-      const gold=[.85,.68,.27];
-
-      building(
-        b,landmarkColliders,
-        x,z,22,43,8.5,yellow,true
-      );
-
-      b.box(x,y+8.7,z,13,7.5,13,yellow,3);
-      b.box(x,y+16.2,z,14,.55,14,white);
-      b.box(x,y+16.75,z,8,7.0,8,yellow,3);
-      b.box(x,y+23.75,z,8.7,.45,8.7,white);
-      b.cylinder(x,y+24.2,z,2.7,4.0,gold,12);
-
-      // Сужающийся золотой шпиль.
-      const start=y+28.2;
-      const segments=12;
-      for(let i=0;i<segments;i++){
-        const r0=2.35*(1-i/segments)+.025;
-        const r1=2.35*(1-(i+1)/segments)+.025;
-        const bottom=start+i*1.55;
-        const top=bottom+1.55;
-
-        for(let j=0;j<10;j++){
-          const a=j/10*TAU;
-          const c=(j+1)/10*TAU;
-          b.quad(
-            [x+Math.cos(a)*r0,bottom,z+Math.sin(a)*r0],
-            [x+Math.cos(a)*r1,top,z+Math.sin(a)*r1],
-            [x+Math.cos(c)*r1,top,z+Math.sin(c)*r1],
-            [x+Math.cos(c)*r0,bottom,z+Math.sin(c)*r0],
-            gold
-          );
-        }
-      }
-
-      b.box(x,start+18.6,z,.08,2.1,.08,gold);
-      b.box(x,start+20.0,z,1.05,.08,.08,gold);
-
-      // Береговая крепостная стена.
-      b.box(425,groundHeight(425,z-5),z-5,4,5.4,82,[.62,.47,.35]);
-      for(let i=0;i<14;i++){
-        const zz=z-43+i*6;
-        b.box(
-          425,groundHeight(425,zz)+5.4,zz,
-          4.4,.65,1.8,[.71,.57,.43]
-        );
-      }
-
-      landmarkColliders.push({x:425,z:z-5,w:2.1,d:41});
-      addSpbMesh(b,x,z,90);
-    }
-
-    /* ================= ОРИЕНТИРЫ В РЕНДЕРЕ ================= */
-
-    const originalRender=render;
-
-    render=function(alpha){
-      originalRender(alpha);
-      if(lost||gl.isContextLost())return;
-
-      // Основной рендер оставляет активным worldProgram.
-      gl.useProgram(worldProgram);
-      gl.uniform1f(U.uBrake,0);
-
-      const distance=
-        quality==='high'?640:
-        quality==='low'?335:475;
-
-      for(const item of spbMeshes){
-        if(Math.hypot(
-          cameraEye[0]-item.x,
-          cameraEye[2]-item.z
-        )<distance+item.radius){
-          draw(item.mesh);
-        }
-      }
-    };
-
-    /* ================= НАЗВАНИЯ НА МИНИ-КАРТЕ ================= */
-
-    const originalDrawMap=drawMap;
-
-    drawMap=function(){
-      originalDrawMap();
-      if(!mapContext)return;
-
-      const c=mapContext;
-      const scale=.31;
-
-      c.save();
-      c.beginPath();
-      c.rect(5,19,230,216);
-      c.clip();
-
-      c.font='bold 9px Arial';
-      c.textBaseline='middle';
-
-      for(const point of spbPoints){
-        const x=120+(point.x-car.x)*scale;
-        const z=120+(point.z-car.z)*scale;
-
-        if(x<12||x>226||z<25||z>224)continue;
-        if(Math.hypot(x-120,z-120)<15)continue;
-
-        c.shadowBlur=0;
-        c.fillStyle='#f1d38b';
-        c.beginPath();
-        c.arc(x,z,3,0,TAU);
-        c.fill();
-
-        const textWidth=c.measureText(point.short).width;
-        const tx=clamp(x+6,8,232-textWidth);
-        const ty=clamp(z-7,25,222);
-
-        c.fillStyle='rgba(10,24,34,.88)';
-        c.fillRect(tx-3,ty-6,textWidth+6,13);
-
-        c.fillStyle='#f4e4b9';
-        c.fillText(point.short,tx,ty);
-      }
-
-      c.restore();
-    };
-
-    /* ================= РАЙОНЫ И УЛИЦЫ ================= */
-
-    const originalUpdateHUD=updateHUD;
-
-    updateHUD=function(){
-      originalUpdateHUD();
-
-      let label=zoneNames[zone(car.x,car.z)];
-
-      if(isRiver(car.x)&&bridge(car.x,car.z)){
-        const row=Math.round(car.z/BLOCK);
-        label=
-          row===0?'ДВОРЦОВЫЙ МОСТ':
-          row===-2?'ТРОИЦКИЙ МОСТ':
-          row===2?'БИРЖЕВОЙ МОСТ':
-          'МОСТ ЧЕРЕЗ НЕВУ';
-      }else{
-        let nearest=null;
-        let nearestDistance=Infinity;
-
-        for(const point of spbPoints){
-          const distance=Math.hypot(car.x-point.x,car.z-point.z);
-          if(distance<nearestDistance){
-            nearestDistance=distance;
-            nearest=point;
-          }
-        }
-
-        if(nearest&&nearestDistance<68){
-          label=nearest.name.toUpperCase();
-        }else if(
-          Math.abs(car.z+120)<11&&
-          car.x>-650&&car.x<250
-        ){
-          label='НЕВСКИЙ ПРОСПЕКТ';
-        }
-      }
-
-      $('district').textContent=label;
-    };
-
-    /* ================= МАШИНА ЧУТЬ БЫСТРЕЕ ================= */
-
-    const originalPhysics=physics;
-
-    physics=function(dt){
-      // Дополнительная тяга без изменения тормоза,
-      // заднего хода и стоимости улучшений.
-      if(
-        input.gas&&
-        !input.brake&&
-        !input.hand&&
-        car.health>0&&
-        car.water===0
-      ){
-        const fx=-Math.sin(car.h);
-        const fz=-Math.cos(car.h);
-        const forward=car.vx*fx+car.vz*fz;
-
-        if(forward>=0){
-          const offroad=
-            roadNear(car.x,car.z)>11&&!bridge(car.x,car.z);
-
-          const extra=
-            3.8*
-            (1+saved.engine*.12)*
-            (1-clamp(forward/110,0,.92))*
-            (offroad?.65:1);
-
-          car.vx+=fx*extra*dt;
-          car.vz+=fz*extra*dt;
-        }
-      }
-
-      originalPhysics(dt);
-    };
-
-    /* ================= ЗАВЕРШЕНИЕ ЗАПУСКА ================= */
-
-    // Пересчитываем приоритет секторов после исправления heading.
-    updatePlan(true);
-
-    checkMissions();
-    refreshMenu();
-    updateHUD();
-
-    // Повторный кадр уже с петербургскими ориентирами.
-    render(1);
-
-    // Единственный непрерывный игровой цикл.
-    lastTime=performance.now();
-    raf=requestAnimationFrame(frame);
-
-  } // Конец run().
-})(); // Конец изолированного блока игры.
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>WHITELINE — Drift City</title>
+<style>
+:root{--accent:#80efff;--panel:rgba(12,18,28,.92);--muted:#a5b4c6}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101724;color:#eef7ff;font-family:Arial,sans-serif}
+button,select{font:inherit}
+button{border:1px solid #ffffff25;border-radius:12px;padding:12px 16px;background:#ffffff0b;color:inherit;cursor:pointer;touch-action:manipulation;transition:background .18s,transform .18s}
+button:hover{background:#ffffff18}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.45;cursor:not-allowed}
+select{width:100%;padding:12px;background:#172432;color:white;border:1px solid #ffffff22;border-radius:10px}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;touch-action:none}
+#shade{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 38%,#04081266)}
+#overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#07102070;backdrop-filter:blur(9px);padding:16px;z-index:5}
+.panel{width:min(780px,100%);max-height:94vh;overflow:auto;background:var(--panel);border:1px solid #ffffff1e;border-radius:24px;padding:28px;box-shadow:0 25px 100px #0008}
+.logo{font-size:clamp(30px,7vw,54px);letter-spacing:6px;font-weight:900;margin:0}
+.subtitle{color:var(--accent);letter-spacing:5px;font-size:12px;margin:8px 0 22px}
+.info{color:var(--muted);font-size:13px;line-height:1.6}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{border:1px solid #ffffff16;border-radius:15px;background:#ffffff05;padding:15px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1}
+.selected{border-color:var(--accent);background:#80efff18;color:var(--accent)}
+.primary{background:var(--accent);color:#06151d;border:0;font-weight:bold}
+.primary:hover{background:#b5f6ff}
+.tabs{display:flex;gap:8px;margin:20px 0}
+.tabcontent{display:none}
+.tabcontent.active{display:block}
+.stat{font-size:22px;font-weight:bold;margin-top:6px}
+.small{font-size:12px;color:var(--muted)}
+.shopitem{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #ffffff12;gap:12px}
+.shopitem b{display:block;font-size:14px}
+.shopitem span{display:block;font-size:12px;color:var(--muted);margin-top:5px}
+.colors{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.swatch{width:40px;height:40px;padding:0;border:3px solid transparent;border-radius:50%}
+.swatch.selected{border-color:white}
+#hud{position:fixed;inset:0;pointer-events:none;display:none;z-index:2}
+.hudtop{position:absolute;left:18px;top:18px;display:flex;gap:10px;flex-wrap:wrap;max-width:calc(100% - 180px)}
+.badge{background:#07121bcc;backdrop-filter:blur(10px);border:1px solid #ffffff20;border-radius:12px;padding:10px 14px;font-size:12px}
+.badge b{font-size:19px;display:block;margin-top:4px}
+#controls{position:absolute;right:16px;top:16px;display:flex;gap:7px;pointer-events:auto}
+#controls button{background:#07121bcc;padding:11px}
+#speedbox{position:absolute;bottom:25px;right:25px;text-align:right;text-shadow:0 2px 8px #000}
+#speed{font-size:64px;font-weight:900;line-height:1}
+#speedbox .small{color:#fff}
+#bars{position:absolute;left:20px;bottom:25px;width:190px}
+.bar{height:7px;background:#ffffff22;margin:7px 0 12px;border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:100%;transition:width .12s}
+#healthbar{background:#8ef4ad}
+#drift{position:absolute;top:100px;left:50%;transform:translateX(-50%);text-align:center;color:#a8f6ff;font-weight:900;font-size:30px;text-shadow:0 0 20px #35c6ff;opacity:0;transition:opacity .15s}
+#drift span{display:block;font-size:11px;letter-spacing:3px;color:#fff}
+#mission{position:absolute;left:20px;top:105px;max-width:250px;font-size:12px;color:#fff;text-shadow:0 2px 5px #000}
+#minimap{position:fixed;right:22px;bottom:124px;width:142px;height:142px;border:1px solid #ffffff40;border-radius:15px;background:#081521b8;display:none;z-index:2;pointer-events:none}
+#touch{position:fixed;inset:0;pointer-events:none;display:none;z-index:3}
+.touchgroup{position:absolute;bottom:24px;display:flex;gap:9px;align-items:flex-end}
+.touchgroup.left{left:16px}
+.touchgroup.right{right:16px}
+.touchbtn{pointer-events:auto;width:66px;height:66px;padding:0;background:#102536b8;border:1px solid #ffffff40;font-size:22px;touch-action:none;user-select:none}
+.touchbtn.pressed{background:#80efff66}
+.touchbtn.tall{height:85px}
+#toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%);padding:12px 20px;border:1px solid #ffffff30;border-radius:14px;background:#081522ee;color:#fff;z-index:10;opacity:0;transition:opacity .25s;pointer-events:none;text-align:center;max-width:90%}
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#101724;z-index:20;font-size:18px;letter-spacing:3px}
+#fatal{display:none;color:#ffb8b8;white-space:pre-wrap;padding:15px}
+body.mobile #speedbox{bottom:118px;right:20px}
+body.mobile #bars{bottom:112px;left:18px;width:145px}
+body.mobile #minimap{bottom:194px;width:100px;height:100px}
+body.mobile .hudtop{left:12px;top:12px;gap:6px}
+body.mobile .badge{padding:8px 10px}
+body.mobile .badge b{font-size:16px}
+body.mobile #mission{top:93px;left:14px;max-width:190px}
+@media(max-width:600px){
+.panel{padding:20px;border-radius:18px}
+.grid{gap:10px}
+.logo{letter-spacing:3px}
+#controls{right:8px;gap:4px}
+#controls button{padding:9px}
+.hudtop{max-width:calc(100% - 140px)}
+.badge:nth-child(3){display:none}
+.touchbtn{width:57px;height:61px}
+.touchgroup{gap:6px}
+.touchgroup.left{left:10px}
+.touchgroup.right{right:10px}
+}
+</style>
+</head>
+<body>
+<canvas id="game" tabindex="0"></canvas>
+<div id="shade"></div>
+<div id="loading">СОЗДАЁМ ГОРОД…</div>
+
+<div id="overlay">
+<div class="panel">
+<h1 class="logo">WHITELINE</h1>
+<div class="subtitle">DRIFT CITY · НЕВСКИЙ РАЙОН</div>
+<div class="info">Свободная поездка по стилизованному городу: набережные, мосты, исторические кварталы и спальные районы. Дрифтуй, выполняй задания и улучшай автомобиль.</div>
+<div id="fatal"></div>
+<div class="tabs">
+<button class="selected" data-tab="main">Поездка</button>
+<button data-tab="garage">Гараж</button>
+<button data-tab="stats">Статистика</button>
+</div>
+
+<div id="main" class="tabcontent active">
+<div class="grid">
+<div class="card">
+<label>Управление при этом запуске</label>
+<div class="row">
+<button id="pcChoice" class="selected">ПК</button>
+<button id="phoneChoice">Телефон</button>
+</div>
+</div>
+<div class="card">
+<label>Время суток</label>
+<select id="daySelect">
+<option value="day">Светлый день</option>
+<option value="sunset">Закат над Невой</option>
+<option value="night">Ночной город</option>
+</select>
+</div>
+<div class="card">
+<label>Качество графики</label>
+<select id="qualitySelect">
+<option value="low">Низкое — экономия</option>
+<option value="medium" selected>Среднее — баланс</option>
+<option value="high">Высокое — детализация</option>
+</select>
+</div>
+<div class="card">
+<label>Звук двигателя</label>
+<button id="soundBtn" style="width:100%">Звук: включён</button>
+</div>
+</div>
+<p class="info">ПК: W/S или ↑/↓ — газ и тормоз; A/D или ←/→ — поворот; пробел — ручник; Shift — нитро; C — камера; R — вернуть машину; Esc — меню.</p>
+<div class="row">
+<button id="start" class="primary">Начать поездку</button>
+<button id="fullBtn">Полный экран</button>
+</div>
+<p class="small">Прогресс сохраняется в этом браузере. Telegram-кнопка не добавлена: ранее указанный username содержит недопустимый символ «%».</p>
+</div>
+
+<div id="garage" class="tabcontent">
+<div class="card">Баланс: <b id="garageMoney">0</b> ₽</div>
+<div id="upgrades"></div>
+<div class="shopitem">
+<div><b>Ремонт автомобиля</b><span>Восстановить прочность — 500 ₽</span></div>
+<button id="repairBtn">Починить</button>
+</div>
+<label style="margin-top:18px">Цвет кузова — бесплатно</label>
+<div id="colors" class="colors"></div>
+</div>
+
+<div id="stats" class="tabcontent">
+<div class="grid">
+<div class="card"><label>Общая дистанция</label><div id="statDistance" class="stat">0 км</div></div>
+<div class="card"><label>Лучший дрифт</label><div id="statBest" class="stat">0</div></div>
+<div class="card"><label>Максимальная скорость</label><div id="statSpeed" class="stat">0 км/ч</div></div>
+<div class="card"><label>Выполнено заданий</label><div id="statMissions" class="stat">0</div></div>
+</div>
+<p class="info">Подсказка: разгонись, поверни и ненадолго зажми ручник. Поддерживай занос газом и контррулением. Удар прерывает серию.</p>
+</div>
+</div>
+</div>
+
+<div id="hud">
+<div class="hudtop">
+<div class="badge">БАЛАНС<b id="money">0 ₽</b></div>
+<div class="badge">ДИСТАНЦИЯ<b id="distance">0.00 км</b></div>
+<div class="badge">РАЙОН<b id="district">Центр</b></div>
+</div>
+<div id="controls">
+<button id="cameraBtn" title="Камера">◉</button>
+<button id="resetBtn" title="Вернуть машину">↺</button>
+<button id="menuBtn" title="Меню">☰</button>
+</div>
+<div id="mission"></div>
+<div id="drift">0<span>ДРИФТ · ×1</span></div>
+<div id="speedbox"><div id="speed">0</div><div class="small">КМ/Ч</div></div>
+<div id="bars">
+<div class="small">ПРОЧНОСТЬ</div><div class="bar"><i id="healthbar"></i></div>
+<div class="small">НИТРО</div><div class="bar"><i id="nitrobar"></i></div>
+</div>
+</div>
+<canvas id="minimap" width="180" height="180"></canvas>
+<div id="touch">
+<div class="touchgroup left">
+<button class="touchbtn" data-action="left">◀</button>
+<button class="touchbtn" data-action="right">▶</button>
+</div>
+<div class="touchgroup right">
+<button class="touchbtn" data-action="nitro">N₂</button>
+<button class="touchbtn" data-action="hand">⤓</button>
+<button class="touchbtn" data-action="brake">▼</button>
+<button class="touchbtn tall" data-action="gas">▲</button>
+</div>
+</div>
+<div id="toast"></div>
+
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const canvas=$('game');
+const gl=canvas.getContext('webgl',{antialias:true,alpha:false,powerPreference:'high-performance'});
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const fract=x=>x-Math.floor(x);
+const rnd=(x,z=0)=>fract(Math.sin(x*127.1+z*311.7)*43758.5453);
+const money=v=>Math.floor(v).toLocaleString('ru-RU');
+const KEY='whiteline-drift-city-complete-v1';
+let data={money:1500,distance:0,best:0,maxSpeed:0,missions:0,engine:0,grip:0,nitro:0,color:0};
+try{
+ const s=JSON.parse(localStorage.getItem(KEY)||'null');
+ if(s&&typeof s==='object'){
+  for(const k in data)if(Number.isFinite(s[k]))data[k]=Math.max(0,s[k]);
+ }
+}catch(e){}
+data.engine=clamp(Math.floor(data.engine),0,5);
+data.grip=clamp(Math.floor(data.grip),0,5);
+data.nitro=clamp(Math.floor(data.nitro),0,5);
+data.color=clamp(Math.floor(data.color),0,6);
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}
+let toastEnd=0;
+function toast(text){
+ $('toast').textContent=text;$('toast').style.opacity=1;toastEnd=performance.now()+2600;
+}
+function fail(text){
+ $('loading').style.display='none';$('overlay').style.display='flex';
+ $('fatal').style.display='block';$('fatal').textContent=text;$('start').disabled=true;
+}
+if(!gl){fail('WebGL недоступен. Попробуй другой браузер или включи аппаратное ускорение.');return;}
+
+const VS=`
+attribute vec3 aPos;
+attribute vec3 aNormal;
+attribute vec3 aColor;
+attribute vec2 aUV;
+attribute float aTile;
+uniform mat4 uVP;
+uniform mat4 uModel;
+varying vec3 vNormal;
+varying vec3 vColor;
+varying vec2 vUV;
+varying float vTile;
+varying vec3 vWorld;
+void main(){
+ vec4 w=uModel*vec4(aPos,1.0);
+ vWorld=w.xyz;
+ vNormal=mat3(uModel)*aNormal;
+ vColor=aColor;vUV=aUV;vTile=aTile;
+ gl_Position=uVP*w;
+}`;
+const FS=`
+precision mediump float;
+varying vec3 vNormal;
+varying vec3 vColor;
+varying vec2 vUV;
+varying float vTile;
+varying vec3 vWorld;
+uniform sampler2D uTexture;
+uniform vec3 uSun;
+uniform vec3 uAmbient;
+uniform vec3 uFog;
+uniform vec3 uEye;
+uniform vec3 uTint;
+uniform float uFogStart;
+uniform float uFogEnd;
+uniform float uTime;
+uniform float uWater;
+uniform float uGlow;
+void main(){
+ float tile=floor(vTile+0.5);
+ vec2 cell=vec2(mod(tile,4.0),floor(tile/4.0));
+ vec2 uv=(cell+vec2(.006)+fract(vUV)*.988)/4.0;
+ vec3 tex=texture2D(uTexture,uv).rgb;
+ vec3 n=normalize(vNormal);
+ float light=max(dot(n,normalize(uSun)),0.0);
+ vec3 color=tex*vColor*uTint*(uAmbient+vec3(light*.62));
+ if(uWater>.5){
+  float wave=sin(vWorld.x*.13+uTime)*sin(vWorld.z*.09-uTime*.8);
+  color=mix(color,uFog,.24)+vec3(.03,.055,.07)*wave;
+ }
+ color+=tex*vColor*uTint*uGlow;
+ float fog=smoothstep(uFogStart,uFogEnd,length(vWorld-uEye));
+ gl_FragColor=vec4(mix(color,uFog,fog),1.0);
+}`;
+function shader(type,src){
+ const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+ if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));
+ return s;
+}
+let program;
+try{
+ program=gl.createProgram();
+ gl.attachShader(program,shader(gl.VERTEX_SHADER,VS));
+ gl.attachShader(program,shader(gl.FRAGMENT_SHADER,FS));
+ gl.linkProgram(program);
+ if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
+}catch(e){fail('Ошибка графики: '+e.message);return;}
+gl.useProgram(program);
+const attrs=['aPos','aNormal','aColor','aUV','aTile'].map(n=>gl.getAttribLocation(program,n));
+const U={};
+['VP','Model','Texture','Sun','Ambient','Fog','Eye','Tint','FogStart','FogEnd','Time','Water','Glow'].forEach(n=>U[n]=gl.getUniformLocation(program,'u'+n));
+gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);
+gl.clearColor(.5,.65,.75,1);
+
+function identity(){return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);}
+const I=identity();
+function model(x,y,z,a=0,sx=1,sy=1,sz=1){
+ const c=Math.cos(a),s=Math.sin(a);
+ return new Float32Array([c*sx,0,-s*sx,0,0,sy,0,0,s*sz,0,c*sz,0,x,y,z,1]);
+}
+function multiply(a,b){
+ const o=new Float32Array(16);
+ for(let c=0;c<4;c++)for(let r=0;r<4;r++){
+  o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];
+ }
+ return o;
+}
+function perspective(fov,aspect,near,far){
+ const f=1/Math.tan(fov/2),o=new Float32Array(16);
+ o[0]=f/aspect;o[5]=f;o[10]=(far+near)/(near-far);o[11]=-1;o[14]=2*far*near/(near-far);
+ return o;
+}
+function lookAt(e,t){
+ let z=e.map((v,i)=>v-t[i]),l=Math.hypot(...z);z=z.map(v=>v/l);
+ let x=[z[2],0,-z[0]];l=Math.hypot(...x)||1;x=x.map(v=>v/l);
+ const y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];
+ return new Float32Array([
+ x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,
+ -x.reduce((s,v,i)=>s+v*e[i],0),-y.reduce((s,v,i)=>s+v*e[i],0),-z.reduce((s,v,i)=>s+v*e[i],0),1
+ ]);
+}
+function mesh(vertices){
+ const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.STATIC_DRAW);
+ return {buffer,count:vertices.length/12};
+}
+function quad(out,p,n,col,tile,uw=1,vh=1){
+ const uv=[[0,0],[0,vh],[uw,vh],[uw,0]];
+ for(const i of [0,1,2,0,2,3])out.push(...p[i],...n,...col,...uv[i],tile);
+}
+function box(out,x,y,z,w,h,d,col=[1,1,1],tile=0,scale=4){
+ const a=x-w/2,b=x+w/2,c=z-d/2,e=z+d/2,k=y+h;
+ quad(out,[[a,y,e],[b,y,e],[b,k,e],[a,k,e]],[0,0,1],col,tile,d/scale,h/scale);
+ quad(out,[[b,y,c],[a,y,c],[a,k,c],[b,k,c]],[0,0,-1],col,tile,w/scale,h/scale);
+ quad(out,[[b,y,e],[b,y,c],[b,k,c],[b,k,e]],[1,0,0],col,tile,d/scale,h/scale);
+ quad(out,[[a,y,c],[a,y,e],[a,k,e],[a,k,c]],[-1,0,0],col,tile,d/scale,h/scale);
+ quad(out,[[a,k,e],[b,k,e],[b,k,c],[a,k,c]],[0,1,0],col,0,w/scale,d/scale);
+ quad(out,[[a,y,c],[b,y,c],[b,y,e],[a,y,e]],[0,-1,0],col,0,w/scale,d/scale);
+}
+function plane(out,x1,z1,x2,z2,y,col,tile,scale=8){
+ quad(out,[[x1,y,z2],[x2,y,z2],[x2,y,z1],[x1,y,z1]],[0,1,0],col,tile,(x2-x1)/scale,(z2-z1)/scale);
+}
+function draw(m,mat=I,tint=[1,1,1],glow=0,water=0){
+ gl.bindBuffer(gl.ARRAY_BUFFER,m.buffer);
+ const sizes=[3,3,3,2,1],offsets=[0,12,24,36,44];
+ for(let i=0;i<5;i++){gl.enableVertexAttribArray(attrs[i]);gl.vertexAttribPointer(attrs[i],sizes[i],gl.FLOAT,false,48,offsets[i]);}
+ gl.uniformMatrix4fv(U.Model,false,mat);gl.uniform3fv(U.Tint,tint);
+ gl.uniform1f(U.Glow,glow);gl.uniform1f(U.Water,water);
+ gl.drawArrays(gl.TRIANGLES,0,m.count);
+}
+
+/* Процедурный атлас: асфальт, фасады, плитка, граффити, вода. */
+const atlas=document.createElement('canvas');atlas.width=atlas.height=512;
+const ac=atlas.getContext('2d'),T=128;
+for(let tile=0;tile<16;tile++){
+ const ox=(tile%4)*T,oy=Math.floor(tile/4)*T;
+ ac.save();ac.translate(ox,oy);
+ const base=['#ffffff','#59616a','#eee1bf','#c0c4c8','#8b9196','#b3aea3','#f6f0db','#65704c','#88949c','#c7b7a3','#60808a','#566775','#e6dfcc','#aea58f','#8598a0','#d7c5aa'][tile];
+ ac.fillStyle=base;ac.fillRect(0,0,T,T);
+ if(tile!==0){
+  for(let j=0;j<1700;j++){
+   const v=rnd(tile*1800+j);ac.fillStyle=`rgba(${v>.5?255:0},${v>.5?255:0},${v>.5?255:0},.05)`;
+   ac.fillRect(rnd(j,tile)*T,rnd(j+50,tile)*T,1.5,1.5);
+  }
+ }
+ if([2,3,6,9,12,15].includes(tile)){
+  ac.fillStyle='#586773';ac.fillRect(28,22,32,65);ac.fillRect(83,22,32,65);
+  ac.fillStyle='#93b3c2';ac.fillRect(32,26,24,55);ac.fillRect(87,26,24,55);
+  ac.fillStyle='#eee1bf';ac.fillRect(43,24,3,60);ac.fillRect(98,24,3,60);
+  ac.fillRect(30,51,28,3);ac.fillRect(85,51,28,3);
+  ac.fillStyle='#ffffff55';ac.fillRect(20,93,104,5);
+  ac.fillStyle='#00000018';ac.fillRect(0,117,128,4);
+ }
+ if(tile===4||tile===5){
+  ac.strokeStyle='#00000030';ac.lineWidth=2;
+  for(let j=0;j<=128;j+=32){ac.beginPath();ac.moveTo(j,0);ac.lineTo(j,128);ac.stroke();ac.beginPath();ac.moveTo(0,j);ac.lineTo(128,j);ac.stroke();}
+ }
+ if(tile===8){
+  ac.fillStyle='#555c65';ac.fillRect(4,4,120,120);
+  ac.font='bold 25px Arial';ac.textAlign='center';ac.lineWidth=4;
+  ac.strokeStyle='#121723';ac.strokeText('NEVA',64,65);
+  ac.fillStyle='#9de9ee';ac.fillText('NEVA',64,65);
+  ac.font='bold 16px Arial';ac.fillStyle='#f389b7';ac.fillText('DRIFT',64,90);
+  ac.strokeStyle='#eed873';ac.beginPath();ac.moveTo(10,105);ac.quadraticCurveTo(70,88,118,110);ac.stroke();
+ }
+ if(tile===10){
+  ac.strokeStyle='#a4cbdc33';
+  for(let j=0;j<12;j++){ac.beginPath();ac.moveTo(0,j*12);ac.bezierCurveTo(35,j*12-5,85,j*12+5,128,j*12);ac.stroke();}
+ }
+ ac.restore();
+}
+const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,atlas);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+gl.uniform1i(U.Texture,0);
+
+/* Город: сетка дорог, речной канал, мосты и кварталы. */
+const STEP=76,LIMIT=532,ROAD=19,RIVER_X=-190,RIVER_W=48;
+const staticV=[],waterV=[],colliders=[],signals=[],lamps=[],traffic=[];
+function terrain(x,z){return Math.sin(z*.006)*1.5+Math.sin(x*.005)*.8+Math.max(0,z-160)*.012;}
+function river(x){return Math.abs(x-RIVER_X)<RIVER_W/2;}
+function roadDistance(v){return Math.abs(v-Math.round(v/STEP)*STEP);}
+function bridge(x,z){return river(x)&&roadDistance(z)<ROAD/2;}
+function surface(x,z){
+ if(bridge(x,z))return terrain(RIVER_X,z)+.5;
+ return terrain(x,z);
+}
+for(let x=-LIMIT;x<LIMIT;x+=19){
+ for(let z=-LIMIT;z<LIMIT;z+=19){
+  const p=[[x,surface(x,z),z+19],[x+19,surface(x+19,z+19),z+19],[x+19,surface(x+19,z),z],[x,surface(x,z),z]];
+  p[0][1]=surface(x,z+19);
+  const isRoad=roadDistance(x+9.5)<ROAD/2||roadDistance(z+9.5)<ROAD/2;
+  if(river(x+9.5)&&!bridge(x+9.5,z+9.5))continue;
+  quad(staticV,p,[0,1,0],isRoad?[.78,.81,.86]:[.65,.72,.58],isRoad?1:7,2.4,2.4);
+ }
+}
+plane(waterV,RIVER_X-RIVER_W/2,-LIMIT,RIVER_X+RIVER_W/2,LIMIT,-2,[.42,.66,.76],10,25);
+
+for(let n=-7;n<=7;n++){
+ const z=n*STEP,y=terrain(RIVER_X,z)+.45;
+ box(staticV,RIVER_X,y,z,RIVER_W+6,.35,ROAD,[.72,.74,.76],4);
+ for(const s of [-1,1]){
+  box(staticV,RIVER_X,y+.35,z+s*(ROAD/2+.3),RIVER_W+6,.85,.35,[.3,.35,.38]);
+ }
+}
+for(const x of [RIVER_X-RIVER_W/2-1,RIVER_X+RIVER_W/2+1]){
+ for(let z=-LIMIT;z<LIMIT;z+=19){
+  if(roadDistance(z+9.5)<ROAD/2)continue;
+  const y=terrain(x,z+9.5);
+  box(staticV,x,y-3,z+9.5,2,3,19,[.7,.72,.73],4);
+  box(staticV,x,y,z+9.5,.5,.75,19,[.35,.4,.44]);
+  colliders.push({x,z:z+9.5,w:2,d:19});
+ }
+}
+
+/* Исторический центр и многоэтажные кварталы Купчино. */
+for(let gx=-7;gx<7;gx++)for(let gz=-7;gz<7;gz++){
+ const cx=gx*STEP+STEP/2,cz=gz*STEP+STEP/2;
+ if(Math.abs(cx-RIVER_X)<RIVER_W/2+24)continue;
+ const outskirts=cz>150;
+ const h=outskirts?24+rnd(gx,gz)*25:11+rnd(gx,gz)*12;
+ const bw=outskirts?32:43,bd=outskirts?32:43;
+ const y=terrain(cx,cz);
+ const col=outskirts?[.79,.83,.86]:[.85+rnd(gx)*.15,.8+rnd(gz)*.16,.73+rnd(gx,gz)*.2];
+ box(staticV,cx,y,cz,bw,h,bd,col,outskirts?3:[2,6,9,12,15][Math.floor(rnd(gx+100,gz)*5)],4.5);
+ box(staticV,cx,y+h,cz,bw+1,.65,bd+1,[.5,.54,.59],4);
+ box(staticV,cx,y,cz,bw+.5,1,bd+.5,[.48,.5,.52],4);
+ if(!outskirts){
+  box(staticV,cx,y+h+.7,cz,bw*.72,2,bd*.78,[.36,.39,.44],1);
+  for(const side of [-1,1]){
+   for(let j=-1;j<=1;j++)box(staticV,cx+j*12,y+.7,cz+side*(bd/2+.3),.8,h-.5,.5,[.93,.9,.81],0);
+  }
+ }
+ colliders.push({x:cx,z:cz,w:bw,d:bd});
+ if(rnd(gx+88,gz)>.63){
+  const xx=cx+bw/2+.03,zz=cz-bd/2+6;
+  quad(staticV,[[xx,y+.5,zz],[xx,y+.5,zz+7],[xx,y+4,zz+7],[xx,y+4,zz]],[1,0,0],[1,1,1],8,1,1);
+ }
+ /* Тротуары по периметру квартала. */
+ const a=gx*STEP+ROAD/2,b=(gx+1)*STEP-ROAD/2;
+ const c=gz*STEP+ROAD/2,d=(gz+1)*STEP-ROAD/2;
+ plane(staticV,a,c,b,c+3,terrain(cx,c)+.12,[.9,.91,.9],5,4);
+ plane(staticV,a,d-3,b,d,terrain(cx,d)+.12,[.9,.91,.9],5,4);
+ plane(staticV,a,c,a+3,d,terrain(a,cz)+.12,[.9,.91,.9],5,4);
+ plane(staticV,b-3,c,b,d,terrain(b,cz)+.12,[.9,.91,.9],5,4);
+ /* Деревья: стволы и несколько объёмов кроны. */
+ for(let t=0;t<3;t++){
+  const tx=gx*STEP+14+t*21,tz=gz*STEP+14;
+  if(river(tx))continue;
+  const ty=terrain(tx,tz);
+  box(staticV,tx,ty,tz,.55,4,.55,[.39,.27,.18]);
+  box(staticV,tx,ty+2.8,tz,3.6,3.1,3.6,[.29,.5,.3],7);
+  box(staticV,tx,ty+5,tz,2.5,1.8,2.5,[.37,.57,.33],7);
+ }
+}
+for(let n=-7;n<=7;n++)for(let k=-7;k<7;k++){
+ const x=n*STEP,z=k*STEP+38;
+ if(river(x))continue;
+ for(const s of [-1,1]){
+  const lx=x+s*12,ly=terrain(lx,z);
+  box(staticV,lx,ly,z,.2,7,.2,[.3,.34,.38]);
+  box(staticV,lx-s*.8,ly+7,z,1.8,.16,.22,[.35,.4,.43]);
+  lamps.push({x:lx-s*1.3,y:ly+6.9,z});
+ }
+}
+for(let nx=-6;nx<=6;nx++)for(let nz=-6;nz<=6;nz++){
+ const x=nx*STEP,z=nz*STEP;if(river(x))continue;
+ /* Штриховая разметка. */
+ for(let j=17;j<STEP-13;j+=10){
+  const zz=z+j;
+  if(zz<LIMIT)plane(staticV,x-.13,zz,x+.13,zz+4,terrain(x,zz)+.045,[.88,.89,.78],0);
+  const xx=x+j;
+  if(xx<LIMIT&&!river(xx))plane(staticV,xx,z-.13,xx+4,z+.13,surface(xx,z)+.045,[.88,.89,.78],0);
+ }
+ if((nx+nz)%2===0){
+  const sx=x+10.8,sz=z+10.8,y=terrain(sx,sz);
+  box(staticV,sx,y,sz,.17,4.4,.17,[.24,.28,.3]);
+  box(staticV,sx,y+3.3,sz,.55,1.3,.55,[.12,.14,.16]);
+  signals.push({x:sx,y:y+3.5,z:sz,ix:x,iz:z,offset:((nx*3+nz*5)%9+9)%9});
+ }
+}
+for(let n=-LIMIT;n<LIMIT;n+=19){
+ for(const side of [-1,1]){
+  box(staticV,side*LIMIT,terrain(side*LIMIT,n+9.5),n+9.5,.8,3.2,19,[.69,.71,.73],4);
+  box(staticV,n+9.5,terrain(n+9.5,side*LIMIT),side*LIMIT,19,3.2,.8,[.69,.71,.73],4);
+ }
+}
+const cityMesh=mesh(staticV),waterMesh=mesh(waterV);
+const cubeV=[];box(cubeV,0,0,0,1,1,1);const cube=mesh(cubeV);
+const bodyV=[];
+box(bodyV,0,.4,0,1.85,.55,4.1,[1,1,1]);
+box(bodyV,0,.9,-.12,1.65,.7,2.15,[.73,.78,.84]);
+box(bodyV,0,.56,-2.06,1.85,.12,.12,[.19,.21,.24]);
+box(bodyV,0,.56,2.06,1.85,.12,.12,[.19,.21,.24]);
+const bodyMesh=mesh(bodyV);
+const glassV=[];
+box(glassV,0,1.07,-.1,1.69,.38,1.72,[.18,.3,.39]);
+const glassMesh=mesh(glassV);
+const wheelV=[];
+for(const x of [-.94,.94])for(const z of [-1.3,1.28])box(wheelV,x,.2,z,.28,.57,.7,[.08,.09,.11]);
+const wheelMesh=mesh(wheelV);
+const lightV=[];
+for(const x of [-.62,.62])box(lightV,x,.67,2.08,.45,.18,.025,[.94,.97,1]);
+const headMesh=mesh(lightV);
+const rearV=[];
+for(const x of [-.65,.65])box(rearV,x,.67,-2.08,.42,.16,.025,[1,.13,.12]);
+const rearMesh=mesh(rearV);
+const colors=[[.82,.86,.9],[.91,.18,.2],[.13,.45,.78],[.16,.2,.25],[.68,.35,.84],[.2,.75,.55],[.95,.63,.19]];
+const player={x:0,z:20,y:surface(0,20),a:0,vx:0,vz:0,steer:0,health:100,nitro:100};
+let previous={...player};
+let playing=false,started=false,mobile=false,sound=true,day='day',quality='medium',time=0,cameraMode=0;
+let chain=0,chainIdle=0,chainDistance=0,sessionDistance=0,impactWait=0,smokeTimer=0;
+let missionStart=data.distance,missionSpeed=0,missionDrift=0;
+let resetCooldown=0;
+const smoke=[],tracks=[];
+let eye=[0,6,8],target=[0,1,20];
+const keys={},pointers=new Map(),input={gas:0,brake:0,left:0,right:0,hand:0,nitro:0};
+function clearInput(){
+ for(const k in keys)delete keys[k];pointers.clear();
+ for(const k in input)input[k]=0;
+ document.querySelectorAll('.touchbtn').forEach(b=>b.classList.remove('pressed'));
+}
+function sync(){
+ input.gas=+(keys.KeyW||keys.ArrowUp||false);
+ input.brake=+(keys.KeyS||keys.ArrowDown||false);
+ input.left=+(keys.KeyA||keys.ArrowLeft||false);
+ input.right=+(keys.KeyD||keys.ArrowRight||false);
+ input.hand=+(keys.Space||false);input.nitro=+(keys.ShiftLeft||keys.ShiftRight||false);
+ for(const v of pointers.values())input[v]=1;
+ document.querySelectorAll('.touchbtn').forEach(b=>b.classList.toggle('pressed',!!input[b.dataset.action]));
+}
+function signalPhase(s){return (time+s.offset)%18;}
+function greenFor(s,axis){
+ const p=signalPhase(s);return axis===0?p<7.2:p>=9&&p<16.2;
+}
+for(let i=0;i<30;i++){
+ const axis=i%2,lane=(Math.floor(rnd(i,7)*11)-5)*STEP,dir=rnd(i,2)>.5?1:-1;
+ if(axis===0&&river(lane))continue;
+ const pos=(rnd(i,9)*1.8-.9)*LIMIT;
+ traffic.push({axis,lane,dir,pos,speed:0,targetSpeed:7+rnd(i,1)*5,col:colors[i%colors.length],oldPos:pos});
+}
+function trafficPosition(t,pos=t.pos){
+ if(t.axis===0)return {x:t.lane+t.dir*3.4,z:pos,a:t.dir===1?0:Math.PI};
+ return {x:pos,z:t.lane-t.dir*3.4,a:t.dir===1?Math.PI/2:-Math.PI/2};
+}
+function updateTraffic(dt){
+ for(const t of traffic){
+  t.oldPos=t.pos;
+  let wanted=t.targetSpeed;
+  const p=trafficPosition(t);
+  for(const s of signals){
+   const cross=t.axis===0?s.iz:s.ix;
+   const line=t.axis===0?s.ix:s.iz;
+   if(Math.abs(line-t.lane)>1)continue;
+   const dist=(cross-t.pos)*t.dir;
+   if(dist>9&&dist<33&&!greenFor(s,t.axis))wanted=Math.min(wanted,Math.max(0,(dist-13)*.55));
+  }
+  for(const other of traffic){
+   if(other===t||other.axis!==t.axis||other.lane!==t.lane||other.dir!==t.dir)continue;
+   const d=(other.pos-t.pos)*t.dir;
+   if(d>0&&d<14)wanted=Math.min(wanted,Math.max(0,(d-7)*.7));
+  }
+  const dx=player.x-p.x,dz=player.z-p.z;
+  const ahead=t.axis===0?dz*t.dir:dx*t.dir;
+  const sideways=t.axis===0?Math.abs(dx):Math.abs(dz);
+  if(ahead>0&&ahead<17&&sideways<3)wanted=Math.min(wanted,Math.max(0,(ahead-7)*.7));
+  t.speed=lerp(t.speed,wanted,1-Math.exp(-dt*2.7));
+  t.pos+=t.speed*t.dir*dt;
+  if(t.pos>LIMIT-12){t.pos=-LIMIT+14;t.oldPos=t.pos;}
+  if(t.pos<-LIMIT+12){t.pos=LIMIT-14;t.oldPos=t.pos;}
+ }
+}
+function finishDrift(crash=false){
+ if(chain>12&&!crash){
+  const earned=Math.floor(chain*.24);
+  data.money+=earned;data.best=Math.max(data.best,Math.floor(chain));
+  missionDrift=Math.max(missionDrift,chain);
+  toast('Дрифт завершён: +'+money(earned)+' ₽');
+ }
+ chain=0;chainIdle=0;chainDistance=0;
+}
+function impact(amount){
+ if(impactWait>0)return;
+ impactWait=.65;
+ player.health=Math.max(0,player.health-amount);
+ finishDrift(true);
+ if(amount>3){toast('Столкновение · −'+Math.ceil(amount)+'% прочности');bumpSound();}
+}
+function physics(dt){
+ previous={...player};
+ impactWait=Math.max(0,impactWait-dt);resetCooldown=Math.max(0,resetCooldown-dt);
+ if(player.health<=0){
+  player.vx*=Math.exp(-dt*4);player.vz*=Math.exp(-dt*4);
+ }else{
+  const fx=Math.sin(player.a),fz=Math.cos(player.a),rx=Math.cos(player.a),rz=-Math.sin(player.a);
+  let forward=player.vx*fx+player.vz*fz;
+  let lateral=player.vx*rx+player.vz*rz;
+  const steerTarget=input.left-input.right;
+  player.steer=lerp(player.steer,steerTarget,1-Math.exp(-dt*9));
+  const boost=input.nitro&&input.gas&&player.nitro>1;
+  let acceleration=input.gas*(12.4+data.engine*2.15)*(boost?1.65:1);
+  if(input.brake)acceleration-=forward>1?25:7;
+  forward+=acceleration*dt;
+  forward*=Math.exp(-dt*(.1+Math.abs(forward)*.004));
+  forward=clamp(forward,-10,46+data.engine*5);
+  const yaw=player.steer*clamp(Math.abs(forward)/12,0,1)*(.9+Math.min(Math.abs(forward),30)*.015);
+  player.a+=yaw*dt*(forward<0?-1:1)*(input.hand?1.4:1);
+  const grip=input.hand?1.25:5.1+data.grip*.55;
+  lateral*=Math.exp(-dt*grip);
+  if(input.hand)forward*=Math.exp(-dt*.43);
+  const nfx=Math.sin(player.a),nfz=Math.cos(player.a),nrx=Math.cos(player.a),nrz=-Math.sin(player.a);
+  /* Инерция сохраняется при повороте кузова. */
+  const oldForward=player.vx*nfx+player.vz*nfz;
+  const oldLateral=player.vx*nrx+player.vz*nrz;
+  const inertial=input.hand?.88:.65;
+  lateral=lerp(lateral,oldLateral,inertial);
+  forward=lerp(forward,oldForward,.06);
+  player.vx=nfx*forward+nrx*lateral;player.vz=nfz*forward+nrz*lateral;
+  player.nitro=clamp(player.nitro+(boost?-24:8)*dt,0,100+data.nitro*20);
+ }
+ const ox=player.x,oz=player.z;
+ player.x+=player.vx*dt;player.z+=player.vz*dt;
+ const speed=Math.hypot(player.vx,player.vz);
+ const r=1.3;
+ for(const b of colliders){
+  if(Math.abs(player.x-b.x)>b.w/2+r||Math.abs(player.z-b.z)>b.d/2+r)continue;
+  const qx=clamp(player.x,b.x-b.w/2,b.x+b.w/2),qz=clamp(player.z,b.z-b.d/2,b.z+b.d/2);
+  let dx=player.x-qx,dz=player.z-qz,dist=Math.hypot(dx,dz);
+  if(dist>=r)continue;
+  if(dist<.001){player.x=ox;player.z=oz;player.vx*=-.2;player.vz*=-.2;impact(speed*.55);continue;}
+  dx/=dist;dz/=dist;player.x+=dx*(r-dist);player.z+=dz*(r-dist);
+  const dot=player.vx*dx+player.vz*dz;
+  if(dot<0){player.vx-=dot*1.22*dx;player.vz-=dot*1.22*dz;impact(Math.abs(dot)*.6);}
+ }
+ if(Math.abs(player.x)>LIMIT-2||Math.abs(player.z)>LIMIT-2){
+  player.x=clamp(player.x,-LIMIT+2,LIMIT-2);player.z=clamp(player.z,-LIMIT+2,LIMIT-2);
+  player.vx*=-.2;player.vz*=-.2;impact(speed*.6);
+ }
+ if(river(player.x)&&!bridge(player.x,player.z)){resetCar(true);return;}
+ for(const t of traffic){
+  const p=trafficPosition(t),dx=player.x-p.x,dz=player.z-p.z,d=Math.hypot(dx,dz);
+  if(d<3.05&&d>.01){
+   player.x+=dx/d*(3.05-d);player.z+=dz/d*(3.05-d);
+   player.vx*=.45;player.vz*=.45;impact(Math.max(3,speed*.4));
+  }
+ }
+ player.y=surface(player.x,player.z);
+ const travelled=Math.hypot(player.x-ox,player.z-oz);
+ data.distance+=travelled;sessionDistance+=travelled;
+ data.maxSpeed=Math.max(data.maxSpeed,speed*3.6);
+ missionSpeed=Math.max(missionSpeed,speed*3.6);
+ /* Оплата километража начисляется небольшими порциями. */
+ if(sessionDistance>=100){data.money+=30;sessionDistance-=100;}
+ const lateral=Math.abs(player.vx*Math.cos(player.a)-player.vz*Math.sin(player.a));
+ const slipping= speed>7&&lateral>2.2&&player.health>0;
+ if(slipping){
+  chain+=dt*(lateral*18+speed*3)*(1+Math.min(chainDistance/140,3));
+  chainDistance+=travelled;chainIdle=0;
+ }else if(chain>0){chainIdle+=dt;if(chainIdle>1.1)finishDrift();}
+ smokeTimer-=dt;
+ if((slipping||input.hand&&speed>6)&&smokeTimer<=0){
+  smokeTimer=.055;
+  for(const s of [-1,1]){
+   const x=player.x-Math.sin(player.a)*1.3+Math.cos(player.a)*s*.85;
+   const z=player.z-Math.cos(player.a)*1.3-Math.sin(player.a)*s*.85;
+   smoke.push({x,z,y:player.y+.3,life:.9,size:.25});
+   tracks.push({x,z,y:player.y+.035,a:player.a,life:12});
+  }
+ }
+ for(let i=smoke.length-1;i>=0;i--){const p=smoke[i];p.life-=dt;p.y+=dt*.6;p.size+=dt*.8;if(p.life<=0)smoke.splice(i,1);}
+ for(let i=tracks.length-1;i>=0;i--){tracks[i].life-=dt;if(tracks[i].life<=0)tracks.splice(i,1);}
+ if(tracks.length>240)tracks.splice(0,tracks.length-240);
+ if(smoke.length>75)smoke.splice(0,smoke.length-75);
+ checkMission();
+}
+function checkMission(){
+ const type=data.missions%3,level=Math.floor(data.missions/3),reward=1200+level*300;
+ let complete=false;
+ if(type===0)complete=data.distance-missionStart>=1000+level*250;
+ if(type===1)complete=missionDrift>=350+level*150;
+ if(type===2)complete=missionSpeed>=Math.min(135,75+level*10);
+ if(complete){
+  data.money+=reward;data.missions++;missionStart=data.distance;missionDrift=0;missionSpeed=0;
+  toast('Задание выполнено! +'+money(reward)+' ₽');save();refreshMenu();
+ }
+}
+function missionText(){
+ const type=data.missions%3,l=Math.floor(data.missions/3);
+ if(type===0)return 'Задание: проехать '+(1000+l*250)+' м · '+Math.floor(data.distance-missionStart)+' м';
+ if(type===1)return 'Задание: дрифт '+(350+l*150)+' очков · '+Math.floor(Math.max(missionDrift,chain));
+ return 'Задание: разогнаться до '+Math.min(135,75+l*10)+' км/ч';
+}
+function resetCar(water=false){
+ if(resetCooldown>0&&!water)return;
+ finishDrift(true);
+ let x=Math.round(player.x/STEP)*STEP,z=player.z;
+ x=clamp(x,-LIMIT+STEP,LIMIT-STEP);z=clamp(z,-LIMIT+STEP,LIMIT-STEP);
+ if(river(x))x=0;
+ player.x=x;player.z=z;player.y=surface(x,z);player.a=0;player.vx=player.vz=0;player.steer=0;
+ if(water)player.health=Math.max(0,player.health-12);
+ previous={...player};resetCooldown=2;
+ eye=[x,player.y+5,z-9];target=[x,player.y+1,z+3];
+ toast(water?'Машина возвращена с набережной':'Машина возвращена на дорогу');
+}
+function repair(){
+ if(player.health>=99){toast('Автомобиль уже исправен');return;}
+ if(data.money<500){toast('Для ремонта нужно 500 ₽');return;}
+ data.money-=500;player.health=100;save();refreshMenu();toast('Автомобиль отремонтирован');
+}
+
+/* Камера и графика. */
+const themes={
+ day:{fog:[.62,.75,.83],ambient:[.5,.52,.56],sun:[-.5,1,.35]},
+ sunset:{fog:[.74,.48,.39],ambient:[.52,.38,.35],sun:[-1,.22,.35]},
+ night:{fog:[.035,.055,.105],ambient:[.24,.29,.38],sun:[-.5,.6,.4]}
+};
+let scale=1,fpsAverage=16.7,adaptTimer=0;
+function resize(){
+ const dpr=Math.min(devicePixelRatio||1,quality==='high'?2:quality==='medium'?1.45:1);
+ const factor=quality==='low'?.78:1;
+ const w=Math.max(1,Math.floor(innerWidth*dpr*factor*scale)),h=Math.max(1,Math.floor(innerHeight*dpr*factor*scale));
+ if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
+}
+addEventListener('resize',resize);
+function renderCar(p,col,braking=false){
+ const m=model(p.x,p.y,p.z,p.a);
+ draw(bodyMesh,m,col);draw(glassMesh,m);draw(wheelMesh,m);
+ draw(headMesh,m,[1,1,1],day==='night'?1.3:.35);
+ draw(rearMesh,m,[1,1,1],braking?1.2:.25);
+ if(day==='night'){
+  for(const s of [-1,1]){
+   const x=p.x+Math.sin(p.a)*6+Math.cos(p.a)*s*.55;
+   const z=p.z+Math.cos(p.a)*6-Math.sin(p.a)*s*.55;
+   draw(cube,model(x,surface(x,z)+.045,z,p.a,1.8,.008,7),[.36,.4,.34],.4);
+  }
+ }
+}
+function camera(dt,p,now){
+ let e,t;
+ if(!playing){
+  const a=now*.00009;
+  e=[p.x+Math.sin(a)*10,p.y+5,p.z+Math.cos(a)*10];t=[p.x,p.y+1,p.z];
+ }else if(cameraMode===0){
+  const speed=Math.hypot(player.vx,player.vz),back=8.3+Math.min(speed*.08,3);
+  e=[p.x-Math.sin(p.a)*back,p.y+4.5,p.z-Math.cos(p.a)*back];
+  t=[p.x+Math.sin(p.a)*5,p.y+1,p.z+Math.cos(p.a)*5];
+ }else if(cameraMode===1){
+  e=[p.x-Math.sin(p.a)*2,p.y+2,p.z-Math.cos(p.a)*2];
+  t=[p.x+Math.sin(p.a)*20,p.y+1.1,p.z+Math.cos(p.a)*20];
+ }else{
+  e=[p.x-4,p.y+24,p.z-12];t=[p.x,p.y,p.z+4];
+ }
+ const f=1-Math.exp(-dt*(cameraMode===1?14:5));
+ for(let i=0;i<3;i++){eye[i]=lerp(eye[i],e[i],f);target[i]=lerp(target[i],t[i],f);}
+ eye[1]=Math.max(eye[1],surface(eye[0],eye[2])+1);
+}
+function render(p,alpha,now){
+ const theme=themes[day];
+ gl.clearColor(...theme.fog,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ gl.uniform3fv(U.Sun,theme.sun);gl.uniform3fv(U.Ambient,theme.ambient);
+ gl.uniform3fv(U.Fog,theme.fog);gl.uniform3fv(U.Eye,eye);
+ gl.uniform1f(U.FogStart,quality==='low'?110:190);
+ gl.uniform1f(U.FogEnd,quality==='low'?340:quality==='medium'?510:740);
+ gl.uniform1f(U.Time,now*.001);
+ const vp=multiply(perspective(Math.PI/3.2,canvas.width/canvas.height,.18,1200),lookAt(eye,target));
+ gl.uniformMatrix4fv(U.VP,false,vp);
+ draw(cityMesh);draw(waterMesh,I,[1,1,1],0,1);
+ for(const t of traffic){
+  const pos=lerp(t.oldPos,t.pos,alpha),tp=trafficPosition(t,pos);
+  if(Math.hypot(tp.x-eye[0],tp.z-eye[2])>350)continue;
+  tp.y=surface(tp.x,tp.z);renderCar(tp,t.col,t.speed<2);
+ }
+ for(const tr of tracks){
+  if(Math.hypot(tr.x-eye[0],tr.z-eye[2])>90)continue;
+  draw(cube,model(tr.x,tr.y,tr.z,tr.a,.18,.007,.65),[.14,.15,.16]);
+ }
+ renderCar(p,colors[data.color],!!input.brake);
+ for(const s of signals){
+  if(Math.hypot(s.x-eye[0],s.z-eye[2])>170)continue;
+  const phase=signalPhase(s);
+  const light=phase<7.2?[.14,1,.39]:phase<9?[1,.71,.12]:[1,.08,.07];
+  draw(cube,model(s.x,s.y+.32,s.z+.29,0,.25,.25,.055),light,1.4);
+  /* Второй сигнал для поперечного направления. */
+  const light2=phase>=9&&phase<16.2?[.14,1,.39]:phase>=16.2?[1,.71,.12]:[1,.08,.07];
+  draw(cube,model(s.x+.29,s.y+.32,s.z,0,.055,.25,.25),light2,1.4);
+ }
+ if(day!=='day'){
+  for(const l of lamps){
+   if(Math.hypot(l.x-eye[0],l.z-eye[2])>130)continue;
+   draw(cube,model(l.x,l.y,l.z,0,.65,.1,.4),[1,.81,.48],1.7);
+  }
+ }
+ if(quality!=='low'){
+  for(const s of smoke){
+   const shade=.36+s.life*.3;
+   draw(cube,model(s.x,s.y,s.z,0,s.size,s.size*.7,s.size),[shade,shade,shade]);
+  }
+ }
+}
+const map=$('minimap').getContext('2d');
+function minimap(){
+ const w=180,k=w/(LIMIT*2+70);
+ map.clearRect(0,0,w,w);map.fillStyle='#0c1c28';map.fillRect(0,0,w,w);
+ const px=x=>90+x*k,pz=z=>90-z*k;
+ map.fillStyle='#305b73';map.fillRect(px(RIVER_X-RIVER_W/2),0,RIVER_W*k,180);
+ map.strokeStyle='#687681';map.lineWidth=1.5;
+ for(let n=-7;n<=7;n++){
+  map.beginPath();map.moveTo(px(n*STEP),pz(-LIMIT));map.lineTo(px(n*STEP),pz(LIMIT));map.stroke();
+  map.beginPath();map.moveTo(px(-LIMIT),pz(n*STEP));map.lineTo(px(LIMIT),pz(n*STEP));map.stroke();
+ }
+ map.fillStyle='#e8ba7c';
+ for(const t of traffic){const p=trafficPosition(t);map.fillRect(px(p.x)-1,pz(p.z)-1,2,2);}
+ map.save();map.translate(px(player.x),pz(player.z));map.rotate(player.a);
+ map.fillStyle='#a1f4ff';map.beginPath();map.moveTo(0,-6);map.lineTo(-4,4);map.lineTo(4,4);map.closePath();map.fill();map.restore();
+}
+function hud(){
+ $('money').textContent=money(data.money)+' ₽';
+ $('distance').textContent=(data.distance/1000).toFixed(2)+' км';
+ $('speed').textContent=Math.round(Math.hypot(player.vx,player.vz)*3.6);
+ $('district').textContent=player.z>150?'Купчино':Math.abs(player.x-RIVER_X)<90?'Набережная':'Центр';
+ $('healthbar').style.width=player.health+'%';
+ $('nitrobar').style.width=player.nitro/(100+data.nitro*20)*100+'%';
+ $('mission').textContent=player.health<=0?'Машина повреждена. Открой гараж для ремонта.':missionText();
+ $('drift').style.opacity=chain>0?1:0;
+ $('drift').innerHTML=Math.floor(chain)+'<span>ДРИФТ · ×'+(1+Math.min(chainDistance/140,3)).toFixed(1)+'</span>';
+ minimap();
+}
+function refreshMenu(){
+ $('garageMoney').textContent=money(data.money);
+ $('statDistance').textContent=(data.distance/1000).toFixed(2)+' км';
+ $('statBest').textContent=money(data.best);
+ $('statSpeed').textContent=Math.round(data.maxSpeed)+' км/ч';
+ $('statMissions').textContent=data.missions;
+ const upgrades=[
+  ['engine','Двигатель','Больше ускорение и максимальная скорость'],
+  ['grip','Спортивная подвеска','Лучше сцепление без ручника'],
+  ['nitro','Баллон нитро','Больше запас ускорения']
+ ];
+ $('upgrades').innerHTML='';
+ for(const [key,title,desc] of upgrades){
+  const level=data[key],cost=2500+level*1800;
+  const item=document.createElement('div');item.className='shopitem';
+  const text=document.createElement('div');
+  text.innerHTML='<b>'+title+' · '+level+'/5</b><span>'+desc+'</span>';
+  const b=document.createElement('button');b.textContent=level>=5?'Максимум':money(cost)+' ₽';
+  b.disabled=level>=5;
+  b.onclick=()=>{
+   if(data.money<cost){toast('Недостаточно денег');return;}
+   data.money-=cost;data[key]++;save();refreshMenu();toast('Улучшение установлено');
+  };
+  item.append(text,b);$('upgrades').append(item);
+ }
+ $('colors').innerHTML='';
+ colors.forEach((c,i)=>{
+  const b=document.createElement('button');b.className='swatch'+(data.color===i?' selected':'');
+  b.style.background='rgb('+c.map(v=>Math.floor(v*255)).join(',')+')';b.title='Цвет '+(i+1);
+  b.onclick=()=>{data.color=i;save();refreshMenu();};$('colors').append(b);
+ });
+}
+
+/* Локальный синтез звука двигателя. */
+let audio=null,engineOsc=null,engineGain=null,filter=null;
+function initAudio(){
+ if(audio){if(audio.state==='suspended')audio.resume().catch(()=>{});return;}
+ try{
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  audio=new AC();engineOsc=audio.createOscillator();engineGain=audio.createGain();filter=audio.createBiquadFilter();
+  engineOsc.type='sawtooth';filter.type='lowpass';filter.frequency.value=380;
+  engineGain.gain.value=0;engineOsc.connect(filter);filter.connect(engineGain);engineGain.connect(audio.destination);engineOsc.start();
+ }catch(e){audio=null;}
+}
+function updateAudio(){
+ if(!audio||!engineGain)return;
+ const speed=Math.hypot(player.vx,player.vz);
+ engineOsc.frequency.setTargetAtTime(35+speed*3+(input.gas?20:0),audio.currentTime,.08);
+ filter.frequency.setTargetAtTime(260+speed*22,audio.currentTime,.1);
+ engineGain.gain.setTargetAtTime(playing&&sound&&player.health>0?.075+(input.gas?.035:0):0,audio.currentTime,.1);
+}
+function bumpSound(){
+ if(!audio||!sound)return;
+ try{
+  const o=audio.createOscillator(),g=audio.createGain();
+  o.type='triangle';o.frequency.setValueAtTime(90,audio.currentTime);o.frequency.exponentialRampToValueAtTime(25,audio.currentTime+.16);
+  g.gain.setValueAtTime(.17,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.18);
+  o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.2);
+ }catch(e){}
+}
+
+/* Интерфейс и ввод. */
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('selected',x===b));
+ document.querySelectorAll('.tabcontent').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));
+ refreshMenu();
+});
+function choosePhone(value){
+ mobile=value;$('phoneChoice').classList.toggle('selected',value);$('pcChoice').classList.toggle('selected',!value);
+}
+$('phoneChoice').onclick=()=>choosePhone(true);
+$('pcChoice').onclick=()=>choosePhone(false);
+$('soundBtn').onclick=()=>{sound=!sound;$('soundBtn').textContent='Звук: '+(sound?'включён':'выключен');if(sound)initAudio();updateAudio();};
+$('daySelect').onchange=()=>day=$('daySelect').value;
+$('qualitySelect').onchange=()=>{quality=$('qualitySelect').value;scale=1;resize();};
+$('repairBtn').onclick=repair;
+$('fullBtn').onclick=async()=>{
+ try{
+  if(document.fullscreenElement)await document.exitFullscreen();
+  else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();
+  else toast('Полноэкранный режим недоступен');
+ }catch(e){toast('Браузер не разрешил полноэкранный режим');}
+};
+function openMenu(){
+ if(!started)return;
+ playing=false;clearInput();finishDrift();previous={...player};accumulator=0;
+ $('overlay').style.display='flex';$('hud').style.display='none';$('touch').style.display='none';$('minimap').style.display='none';
+ $('start').textContent='Продолжить поездку';save();refreshMenu();updateAudio();
+}
+function startGame(){
+ mobile=$('phoneChoice').classList.contains('selected');
+ day=$('daySelect').value;quality=$('qualitySelect').value;
+ document.body.classList.toggle('mobile',mobile);
+ $('overlay').style.display='none';$('hud').style.display='block';$('touch').style.display=mobile?'block':'none';$('minimap').style.display='block';
+ playing=true;started=true;clearInput();previous={...player};accumulator=0;lastTime=performance.now();
+ resize();initAudio();canvas.focus();hud();
+}
+$('start').onclick=startGame;$('menuBtn').onclick=openMenu;
+function changeCamera(){cameraMode=(cameraMode+1)%3;toast(['Камера: сзади','Камера: близко','Камера: сверху'][cameraMode]);}
+$('cameraBtn').onclick=changeCamera;$('resetBtn').onclick=()=>resetCar();
+addEventListener('keydown',e=>{
+ if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)&&playing)e.preventDefault();
+ if(e.code==='Escape'){if(playing)openMenu();return;}
+ if(!playing)return;
+ if(!e.repeat){if(e.code==='KeyC')changeCamera();if(e.code==='KeyR')resetCar();}
+ keys[e.code]=true;sync();
+});
+addEventListener('keyup',e=>{delete keys[e.code];sync();});
+document.querySelectorAll('.touchbtn').forEach(b=>{
+ b.addEventListener('pointerdown',e=>{
+  e.preventDefault();if(!playing)return;initAudio();
+  try{b.setPointerCapture(e.pointerId);}catch(err){}
+  pointers.set(e.pointerId,b.dataset.action);sync();
+ });
+ const release=e=>{pointers.delete(e.pointerId);sync();};
+ b.addEventListener('pointerup',release);b.addEventListener('pointercancel',release);b.addEventListener('lostpointercapture',release);
+ b.addEventListener('contextmenu',e=>e.preventDefault());
+});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+addEventListener('blur',()=>{clearInput();if(playing)openMenu();});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){clearInput();if(playing)openMenu();save();}
+ lastTime=performance.now();accumulator=0;
+});
+addEventListener('pagehide',save);addEventListener('beforeunload',save);
+canvas.addEventListener('webglcontextlost',e=>{
+ e.preventDefault();playing=false;clearInput();updateAudio();
+ fail('Графический контекст потерян. Прогресс сохранён. Перезагрузи страницу.');save();
+});
+canvas.addEventListener('webglcontextrestored',()=>location.reload());
+
+/* Фиксированная физика 120 Гц и интерполяция для плавного рендера. */
+const FIXED=1/120;
+let accumulator=0,lastTime=performance.now(),hudTime=0,saveTime=0,contextLost=false;
+canvas.addEventListener('webglcontextlost',()=>contextLost=true);
+function frame(now){
+ if(contextLost)return;
+ const raw=Math.max(0,(now-lastTime)/1000);lastTime=now;
+ if(document.hidden){requestAnimationFrame(frame);return;}
+ const dt=Math.min(raw,.1);
+ if(raw>0&&raw<.15)fpsAverage=lerp(fpsAverage,raw*1000,.025);
+ if(playing){
+  accumulator=Math.min(accumulator+dt,FIXED*12);
+  let n=0;
+  while(accumulator>=FIXED&&n<12){
+   time+=FIXED;updateTraffic(FIXED);physics(FIXED);accumulator-=FIXED;n++;
+  }
+ }else accumulator=0;
+ const a=playing?clamp(accumulator/FIXED,0,1):1;
+ const p={
+  x:lerp(previous.x,player.x,a),y:lerp(previous.y,player.y,a),z:lerp(previous.z,player.z,a),
+  a:lerp(previous.a,player.a,a)
+ };
+ camera(dt,p,now);render(p,a,now);updateAudio();
+ if(playing){
+  hudTime+=dt;saveTime+=dt;adaptTimer+=dt;
+  if(hudTime>.1){hudTime=0;hud();}
+  if(saveTime>5){saveTime=0;save();}
+  if(adaptTimer>4){
+   adaptTimer=0;
+   const old=scale;
+   if(fpsAverage>27)scale=Math.max(.65,scale-.08);
+   else if(fpsAverage<18)scale=Math.min(1,scale+.04);
+   if(old!==scale)resize();
+  }
+ }
+ if(toastEnd&&now>toastEnd){$('toast').style.opacity=0;toastEnd=0;}
+ requestAnimationFrame(frame);
+}
+refreshMenu();resize();$('loading').style.display='none';
+requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>
